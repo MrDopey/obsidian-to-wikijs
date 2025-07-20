@@ -111,7 +111,14 @@ def add_front_matter(
         markdown, path, note_map
     )
 
-    extra_tags = [t[1:] for t in get_extra_tags(converted_link_markdown)]
+    parsed_tags = get_extra_tags(converted_link_markdown)
+    extra_tags = set()
+
+    for t in parsed_tags:
+        # Need to break it up, as slashes are individually requested
+        # https://github.com/requarks/wiki/blob/d96bbaf42c792f26559540e609b859fa038766ce/client/components/tags.vue#L245
+        for ex in t[1:].split("/"):
+            extra_tags.add(ex)
 
     matter["title"] = title
     matter["description"] = title
