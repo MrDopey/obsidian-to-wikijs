@@ -98,7 +98,10 @@ def add_front_matter(original_text: str, original_path: str) -> str:
     matter["published"] = True
     matter["date"] = date_now
     # https://github.com/requarks/wiki/blob/d96bbaf42c792f26559540e609b859fa038766ce/server/modules/storage/disk/common.js#L83
-    matter["tags"] = ", ".join(matter.get("tags", []))
+    # https://www.geeksforgeeks.org/javascript/lodash-_-isnil-method/
+    tags = matter.get("tags", [])
+    if len(tags) > 0:
+        matter["tags"] = ", ".join(tags)
     matter["editor"] = "markdown"
     matter["dateCreated"] = date_now
 
