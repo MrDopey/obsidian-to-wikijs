@@ -182,8 +182,8 @@ if __name__ == "__main__":
     # For demonstration, we'll create some dummy folders and files.
 
     # Create a dummy source folder structure
-    dummy_source = "/workspaces/media-wiki/pages/supervising/policy"
-    # dummy_source = "/workspaces/media-wiki/pages"
+    # dummy_source = "/workspaces/media-wiki/pages/supervising/policy"
+    dummy_source = "/workspaces/media-wiki/pages"
     dummy_destination = "/workspaces/media-wiki/pages-parsed"
 
     if os.path.exists(dummy_destination) and os.path.isdir(dummy_destination):
