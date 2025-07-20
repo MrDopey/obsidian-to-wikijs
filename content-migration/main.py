@@ -1,7 +1,9 @@
 import os
 
 
-def copy_folder_recursively(source_folder: str, destination_folder: str) -> None:
+def copy_folder_recursively(
+    base_source_folder: str, base_destination_folder: str, suffix: str
+) -> None:
     """
     Recursively copies the contents of the source_folder to the destination_folder,
     preserving the directory structure (depth). This implementation avoids using shutil.
@@ -10,6 +12,9 @@ def copy_folder_recursively(source_folder: str, destination_folder: str) -> None
         source_folder (str): The path to the source folder.
         destination_folder (str): The path to the destination folder.
     """
+    source_folder = os.path.join(base_source_folder, suffix)
+    destination_folder = os.path.join(base_destination_folder, suffix)
+
     # Check if the source folder exists
     if not os.path.exists(source_folder):
         print(f"Error: Source folder '{source_folder}' does not exist.")
@@ -42,7 +47,11 @@ def copy_folder_recursively(source_folder: str, destination_folder: str) -> None
             elif os.path.isdir(source_item_path):
                 # If it's a directory, recursively call the function
                 print(f"Entering directory: '{source_item_path}'")
-                copy_folder_recursively(source_item_path, destination_item_path)
+                copy_folder_recursively(
+                    base_source_folder,
+                    base_destination_folder,
+                    os.path.join(suffix, item_name),
+                )
             else:
                 print(f"Skipping unsupported item type: '{source_item_path}'")
 
@@ -61,45 +70,16 @@ if __name__ == "__main__":
     # For demonstration, we'll create some dummy folders and files.
 
     # Create a dummy source folder structure
-    dummy_source = "source_folder_example_manual"
-    dummy_destination = "destination_folder_example_manual"
+    dummy_source = "/workspaces/media-wiki/pages"
+    dummy_destination = "/workspaces/media-wiki/pages-parsed"
 
-    # Clean up previous runs if they exist
-    # Using os.path.exists and os.path.isdir to avoid issues if it's a file
-    if os.path.exists(dummy_source) and os.path.isdir(dummy_source):
-        import shutil  # Temporarily import shutil for cleanup
-
-        shutil.rmtree(dummy_source)
     if os.path.exists(dummy_destination) and os.path.isdir(dummy_destination):
         import shutil  # Temporarily import shutil for cleanup
 
         shutil.rmtree(dummy_destination)
 
-    os.makedirs(os.path.join(dummy_source, "sub_dir1"), exist_ok=True)
-    os.makedirs(os.path.join(dummy_source, "sub_dir2", "nested_dir"), exist_ok=True)
-
-    with open(os.path.join(dummy_source, "file1.txt"), "w") as f:
-        f.write("This is file 1.")
-    with open(os.path.join(dummy_source, "sub_dir1", "file2.txt"), "w") as f:
-        f.write("This is file 2 in sub_dir1.")
-    with open(
-        os.path.join(dummy_source, "sub_dir2", "nested_dir", "file3.txt"), "w"
-    ) as f:
-        f.write("This is file 3 in nested_dir.")
-
-    print(f"Created dummy source folder: {dummy_source}")
-    print("Contents:")
-    for root, dirs, files in os.walk(dummy_source):
-        level = root.replace(dummy_source, "").count(os.sep)
-        indent = " " * 4 * (level)
-        print(f"{indent}{os.path.basename(root)}/")
-        subindent = " " * 4 * (level + 1)
-        for f in files:
-            print(f"{subindent}{f}")
-    print("-" * 30)
-
     # Call the copy function
-    copy_folder_recursively(dummy_source, dummy_destination)
+    copy_folder_recursively(dummy_source, dummy_destination, "")
 
     print("\n--- Verification ---")
     if os.path.exists(dummy_destination):
