@@ -231,7 +231,7 @@ def wikilink_to_mdlink(match, current_file: Path, note_map: dict[str, Path]):
         link_path = f"/{abs_path.as_posix()}"
     else:
         # Use relative path
-        link_path = f"./{relative_path.as_posix()}"
+        link_path = f"{relative_path.as_posix()}"
 
     # Encode URL (spaces, special chars)
     encoded_path = urllib.parse.quote(link_path.rsplit(".")[0])
