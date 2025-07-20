@@ -25,12 +25,21 @@ def wikilink_to_mdlink(match, current_file):
         return raw  # leave wikilink as-is if target not found
 
     target_path = VAULT_PATH / target_entry.with_suffix(".md")
-    relative_path = target_path.relative_to(current_file.parent.resolve())
-
+    # use_absolute = True
+    # if target_path.is_relative_to(current_file.parent.resolve()):
+    #     relative_path = target_path.relative_to(current_file.parent.resolve())
+    #     use_absolute = sum(1 for part in relative_path.parts if part == "..") > 1
+    try:
+        relative_path = target_path.relative_to(current_file.parent.resolve())
+    except ValueError:
+        # Not a subpath → use absolute-from-vault
+        # relative_path = target_path.relative_to(VAULT_PATH)
+        use_absolute = True
+    else:
+        use_absolute = sum(1 for part in relative_path.parts if part == "..") > 1
     # Count how many parent traversals are needed (e.g. ../../)
-    up_count = sum(1 for part in relative_path.parts if part == "..")
 
-    if up_count > 1:
+    if use_absolute:
         # Use absolute-from-vault path
         abs_path = target_entry.with_suffix(".md")
         link_path = abs_path.as_posix()
