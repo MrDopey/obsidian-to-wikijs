@@ -1,6 +1,10 @@
+# rm -rf ./pages/classrooms/ ./pages/one-off/ ./pages/supervising/Courses/ ./pages/Templates/ ./pages/index.md
 import datetime
 import os
+from pathlib import Path
 
+import re
+import urllib.parse
 import yaml
 
 date_now = (
@@ -9,7 +13,10 @@ date_now = (
 
 
 def copy_folder_recursively(
-    base_source_folder: str, base_destination_folder: str, suffix: str
+    base_source_folder: str,
+    base_destination_folder: str,
+    suffix: str,
+    note_map: dict[str, Path],
 ) -> None:
     """
     Recursively copies the contents of the source_folder to the destination_folder,
@@ -59,8 +66,13 @@ def copy_folder_recursively(
                             with open(
                                 destination_item_path, "w", encoding="utf-8"
                             ) as dest_file:
-                                data = add_front_matter(src_file.read(), item_name)
-                                print(data)
+                                data = add_front_matter(
+                                    src_file.read(),
+                                    item_name,
+                                    Path(source_item_path),
+                                    note_map,
+                                )
+                                # print(data)
                                 dest_file.write(data)
                     case _:
                         with open(source_item_path, "rb") as src_file:
@@ -73,6 +85,7 @@ def copy_folder_recursively(
                     base_source_folder,
                     base_destination_folder,
                     os.path.join(suffix, item_name),
+                    note_map,
                 )
             else:
                 print(f"Skipping unsupported item type: '{source_item_path}'")
@@ -88,10 +101,15 @@ def fix_file_name(path: str) -> str:
     return path.lower().replace(" ", "-")
 
 
-def add_front_matter(original_text: str, original_path: str) -> str:
+def add_front_matter(
+    original_text: str, original_path: str, path: Path, note_map: dict[str, Path]
+) -> str:
     title = original_path.rsplit(".", 1)[0]
 
     matter, markdown = parse_markdown_with_front_matter(original_text)
+    converted_link_markdown = convert_wikilinks_to_markdown_links(
+        markdown, path, note_map
+    )
 
     matter["title"] = title
     matter["description"] = title
@@ -105,7 +123,7 @@ def add_front_matter(original_text: str, original_path: str) -> str:
     matter["editor"] = "markdown"
     matter["dateCreated"] = date_now
 
-    return f"---\n{yaml.dump(matter)}---\n\n{markdown}"
+    return f"---\n{yaml.dump(matter)}---\n\n{converted_link_markdown}"
 
 
 # ---
@@ -176,6 +194,60 @@ def parse_markdown_with_front_matter(
     return front_matter, truncated_markdown
 
 
+def wikilink_to_mdlink(match, current_file: Path, note_map: dict[str, Path]):
+    raw = match.group(0)
+    target = match.group(1).strip()
+    anchor = match.group(2) or ""
+    alias = match.group(4) or target.split("/")[-1]
+
+    # Remove anchor from target
+    if "#" in target:
+        target, inline_anchor = target.split("#", 1)
+        anchor = f"#{inline_anchor}"
+
+    # Get note path
+    target_entry = note_map.get(target.split("/")[-1])
+    if not target_entry:
+        return raw  # leave wikilink as-is if target not found
+
+    target_path = target_entry.with_suffix(".md")
+    # use_absolute = True
+    # if target_path.is_relative_to(current_file.parent.resolve()):
+    #     relative_path = target_path.relative_to(current_file.parent.resolve())
+    #     use_absolute = sum(1 for part in relative_path.parts if part == "..") > 1
+    try:
+        relative_path = target_path.relative_to(current_file.parent.resolve())
+    except ValueError:
+        # Not a subpath → use absolute-from-vault
+        # relative_path = target_path.relative_to(VAULT_PATH)
+        use_absolute = True
+    else:
+        use_absolute = sum(1 for part in relative_path.parts if part == "..") > 1
+    # Count how many parent traversals are needed (e.g. ../../)
+
+    if use_absolute:
+        # Use absolute-from-vault path
+        abs_path = target_entry.with_suffix(".md")
+        link_path = abs_path.as_posix()
+    else:
+        # Use relative path
+        link_path = relative_path.as_posix()
+
+    # Encode URL (spaces, special chars)
+    encoded_path = urllib.parse.quote(link_path.rsplit(".")[0])
+    return f"[{alias}]({encoded_path}{anchor})"
+
+
+def convert_wikilinks_to_markdown_links(
+    markdown: str, file_path: Path, note_map: dict[str, Path]
+) -> str:
+    def repl(match):
+        return wikilink_to_mdlink(match, file_path.resolve(), note_map)
+
+    converted = re.sub(r"\[\[([^\]\|#]+)(#[^\]\|]+)?(\|([^\]]+))?\]\]", repl, markdown)
+    return converted
+
+
 if __name__ == "__main__":
     # --- Example Usage ---
     # Define your source and destination paths here.
@@ -191,8 +263,11 @@ if __name__ == "__main__":
 
         shutil.rmtree(dummy_destination)
 
+    vault_path = Path(dummy_source)
+    note_map = {f.stem: f.relative_to(vault_path) for f in vault_path.rglob("*.md")}
+
     # Call the copy function
-    copy_folder_recursively(dummy_source, dummy_destination, "")
+    copy_folder_recursively(dummy_source, dummy_destination, "", note_map)
 
     print("\n--- Verification ---")
     if os.path.exists(dummy_destination):
