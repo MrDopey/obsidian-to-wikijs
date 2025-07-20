@@ -97,11 +97,12 @@ def add_front_matter(original_text: str, original_path: str) -> str:
     matter["description"] = title
     matter["published"] = True
     matter["date"] = date_now
-    matter["tags"] = matter.get("tags", [])
+    # https://github.com/requarks/wiki/blob/d96bbaf42c792f26559540e609b859fa038766ce/server/modules/storage/disk/common.js#L83
+    matter["tags"] = ", ".join(matter.get("tags", []))
     matter["editor"] = "markdown"
     matter["dateCreated"] = date_now
 
-    return f"---\n{yaml.dump(matter)}\n---\n{markdown}"
+    return f"---\n{yaml.dump(matter)}---\n\n{markdown}"
 
 
 # ---
