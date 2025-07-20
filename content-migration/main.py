@@ -1,11 +1,10 @@
 import os
-import shutil
 
 
-def copy_folder_recursively(source_folder, destination_folder):
+def copy_folder_recursively(source_folder: str, destination_folder: str) -> None:
     """
     Recursively copies the contents of the source_folder to the destination_folder,
-    preserving the directory structure (depth).
+    preserving the directory structure (depth). This implementation avoids using shutil.
 
     Args:
         source_folder (str): The path to the source folder.
@@ -21,34 +20,39 @@ def copy_folder_recursively(source_folder, destination_folder):
         print(f"Error: Source path '{source_folder}' is not a directory.")
         return
 
-    # Check if the destination folder already exists.
-    # shutil.copytree requires the destination to NOT exist.
-    if os.path.exists(destination_folder):
-        print(f"Warning: Destination folder '{destination_folder}' already exists.")
-        print("Attempting to remove existing destination to ensure a clean copy.")
-        try:
-            shutil.rmtree(destination_folder)
-            print(
-                f"Successfully removed existing destination folder: '{destination_folder}'"
-            )
-        except OSError as e:
-            print(
-                f"Error: Could not remove existing destination folder '{destination_folder}'."
-            )
-            print(
-                f"Please delete it manually or choose a different destination. Error: {e}"
-            )
-            return
+    # Create the destination root folder if it doesn't exist
+    # If it exists, we will proceed to copy into it, overwriting files if they have the same name.
+    os.makedirs(destination_folder, exist_ok=True)
+    print(f"Ensured destination folder '{destination_folder}' exists.")
 
     try:
-        # shutil.copytree copies the entire directory tree from src to dst.
-        # The dst directory must not already exist. It is created during the copy.
-        shutil.copytree(source_folder, destination_folder)
-        print(f"Successfully copied '{source_folder}' to '{destination_folder}'.")
-    except shutil.Error as e:
-        print(f"Error during copy operation: {e}")
+        # Walk through the source directory
+        for item_name in os.listdir(source_folder):
+            source_item_path = os.path.join(source_folder, item_name)
+            destination_item_path = os.path.join(destination_folder, item_name)
+
+            if os.path.isfile(source_item_path):
+                # If it's a file, copy it
+                print(
+                    f"Copying file: '{source_item_path}' to '{destination_item_path}'"
+                )
+                with open(source_item_path, "rb") as src_file:
+                    with open(destination_item_path, "wb") as dest_file:
+                        dest_file.write(src_file.read())
+            elif os.path.isdir(source_item_path):
+                # If it's a directory, recursively call the function
+                print(f"Entering directory: '{source_item_path}'")
+                copy_folder_recursively(source_item_path, destination_item_path)
+            else:
+                print(f"Skipping unsupported item type: '{source_item_path}'")
+
+        print(
+            f"Successfully copied contents of '{source_folder}' to '{destination_folder}'."
+        )
     except OSError as e:
         print(f"Operating system error during copy: {e}")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
 
 
 if __name__ == "__main__":
@@ -57,13 +61,18 @@ if __name__ == "__main__":
     # For demonstration, we'll create some dummy folders and files.
 
     # Create a dummy source folder structure
-    dummy_source = "source_folder_example"
-    dummy_destination = "destination_folder_example"
+    dummy_source = "source_folder_example_manual"
+    dummy_destination = "destination_folder_example_manual"
 
     # Clean up previous runs if they exist
-    if os.path.exists(dummy_source):
+    # Using os.path.exists and os.path.isdir to avoid issues if it's a file
+    if os.path.exists(dummy_source) and os.path.isdir(dummy_source):
+        import shutil  # Temporarily import shutil for cleanup
+
         shutil.rmtree(dummy_source)
-    if os.path.exists(dummy_destination):
+    if os.path.exists(dummy_destination) and os.path.isdir(dummy_destination):
+        import shutil  # Temporarily import shutil for cleanup
+
         shutil.rmtree(dummy_destination)
 
     os.makedirs(os.path.join(dummy_source, "sub_dir1"), exist_ok=True)
@@ -109,8 +118,11 @@ if __name__ == "__main__":
         )
 
     # You can uncomment the following lines to clean up the dummy folders after running
-    # if os.path.exists(dummy_source):
+    # Note: Using shutil for cleanup as it's more robust for removing directories.
+    # if os.path.exists(dummy_source) and os.path.isdir(dummy_source):
+    #     import shutil
     #     shutil.rmtree(dummy_source)
-    # if os.path.exists(dummy_destination):
+    # if os.path.exists(dummy_destination) and os.path.isdir(dummy_destination):
+    #     import shutil
     #     shutil.rmtree(dummy_destination)
     # print("\nCleaned up dummy folders.")
