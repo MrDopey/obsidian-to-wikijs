@@ -48,7 +48,7 @@ def wikilink_to_mdlink(match, current_file):
         link_path = relative_path.as_posix()
 
     # Encode URL (spaces, special chars)
-    encoded_path = urllib.parse.quote(link_path)
+    encoded_path = urllib.parse.quote(link_path.rsplit(".")[0])
     return f"[{alias}]({encoded_path}{anchor})"
 
 
