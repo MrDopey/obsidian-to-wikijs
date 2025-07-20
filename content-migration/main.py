@@ -111,6 +111,8 @@ def add_front_matter(
         markdown, path, note_map
     )
 
+    extra_tags = [t[1:] for t in get_extra_tags(converted_link_markdown)]
+
     matter["title"] = title
     matter["description"] = title
     matter["published"] = True
@@ -118,6 +120,7 @@ def add_front_matter(
     # https://github.com/requarks/wiki/blob/d96bbaf42c792f26559540e609b859fa038766ce/server/modules/storage/disk/common.js#L83
     # https://www.geeksforgeeks.org/javascript/lodash-_-isnil-method/
     tags = matter.get("tags", [])
+    tags.extend(extra_tags)
     if len(tags) > 0:
         matter["tags"] = ", ".join(tags)
     matter["editor"] = "markdown"
@@ -246,6 +249,11 @@ def convert_wikilinks_to_markdown_links(
 
     converted = re.sub(r"\[\[([^\]\|#]+)(#[^\]\|]+)?(\|([^\]]+))?\]\]", repl, markdown)
     return converted
+
+
+def get_extra_tags(markdown: str) -> list[str]:
+    regex = r"[^#\w](#[^\s#\)]+)"
+    return re.findall(regex, markdown)
 
 
 if __name__ == "__main__":
