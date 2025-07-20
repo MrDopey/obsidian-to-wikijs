@@ -1,6 +1,9 @@
+import datetime
 import os
 
 import yaml
+
+date_now = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
 
 def copy_folder_recursively(
@@ -54,8 +57,9 @@ def copy_folder_recursively(
                             with open(
                                 destination_item_path, "w", encoding="utf-8"
                             ) as dest_file:
-                                add_front_matter(src_file.read(), item_name)
-                                dest_file.write(src_file.read())
+                                data = add_front_matter(src_file.read(), item_name)
+                                print(data)
+                                dest_file.write(data)
                     case _:
                         with open(source_item_path, "rb") as src_file:
                             with open(destination_item_path, "wb") as dest_file:
@@ -86,8 +90,16 @@ def add_front_matter(original_text: str, original_path: str) -> str:
     title = original_path.rsplit(".", 1)[0]
 
     matter, markdown = parse_markdown_with_front_matter(original_text)
-    print(matter)
-    print(markdown)
+
+    matter["title"] = title
+    matter["description"] = title
+    matter["published"] = True
+    matter["date"] = date_now
+    matter["tags"] = matter.get("tags", [])
+    matter["editor"] = "markdown"
+    matter["dateCreated"] = date_now
+
+    return f"---\n{yaml.dump(matter)}\n---\n{markdown}"
 
 
 # ---
