@@ -3,7 +3,9 @@ import os
 
 import yaml
 
-date_now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+date_now = (
+    datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat()
+)
 
 
 def copy_folder_recursively(
