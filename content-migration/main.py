@@ -13,7 +13,7 @@ def copy_folder_recursively(
         destination_folder (str): The path to the destination folder.
     """
     source_folder = os.path.join(base_source_folder, suffix)
-    destination_folder = os.path.join(base_destination_folder, suffix)
+    destination_folder = os.path.join(base_destination_folder, fix_file_name(suffix))
 
     # Check if the source folder exists
     if not os.path.exists(source_folder):
@@ -34,7 +34,9 @@ def copy_folder_recursively(
         # Walk through the source directory
         for item_name in os.listdir(source_folder):
             source_item_path = os.path.join(source_folder, item_name)
-            destination_item_path = os.path.join(destination_folder, item_name)
+            destination_item_path = os.path.join(
+                destination_folder, fix_file_name(item_name)
+            )
 
             if os.path.isfile(source_item_path):
                 # If it's a file, copy it
@@ -62,6 +64,10 @@ def copy_folder_recursively(
         print(f"Operating system error during copy: {e}")
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
+
+
+def fix_file_name(path: str) -> str:
+    return path.lower().replace(" ", "-")
 
 
 if __name__ == "__main__":
