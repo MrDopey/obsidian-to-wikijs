@@ -1,5 +1,7 @@
 import os
 
+import yaml
+
 
 def copy_folder_recursively(
     base_source_folder: str, base_destination_folder: str, suffix: str
@@ -39,13 +41,25 @@ def copy_folder_recursively(
             )
 
             if os.path.isfile(source_item_path):
-                # If it's a file, copy it
+
+                file_type = item_name.rsplit(".", 1)[1]
                 print(
-                    f"Copying file: '{source_item_path}' to '{destination_item_path}'"
+                    f"Copying file {file_type}: '{source_item_path}' to '{destination_item_path}'"
                 )
-                with open(source_item_path, "rb") as src_file:
-                    with open(destination_item_path, "wb") as dest_file:
-                        dest_file.write(src_file.read())
+
+                match file_type:
+                    case "md":
+                        # If it's a file, copy it
+                        with open(source_item_path, "r", encoding="utf-8") as src_file:
+                            with open(
+                                destination_item_path, "w", encoding="utf-8"
+                            ) as dest_file:
+                                add_front_matter(src_file.read(), item_name)
+                                dest_file.write(src_file.read())
+                    case _:
+                        with open(source_item_path, "rb") as src_file:
+                            with open(destination_item_path, "wb") as dest_file:
+                                dest_file.write(src_file.read())
             elif os.path.isdir(source_item_path):
                 # If it's a directory, recursively call the function
                 print(f"Entering directory: '{source_item_path}'")
@@ -62,12 +76,86 @@ def copy_folder_recursively(
         )
     except OSError as e:
         print(f"Operating system error during copy: {e}")
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
 
 
 def fix_file_name(path: str) -> str:
     return path.lower().replace(" ", "-")
+
+
+def add_front_matter(original_text: str, original_path: str) -> str:
+    title = original_path.rsplit(".", 1)[0]
+
+    matter, markdown = parse_markdown_with_front_matter(original_text)
+    print(matter)
+    print(markdown)
+
+
+# ---
+# title: Hello-world
+# description:
+# published: true
+# date: 2025-07-19T14:40:21.207Z
+# tags:
+# editor: markdown
+# dateCreated: 2025-07-17T13:14:54.918Z
+# ---
+
+
+def parse_markdown_with_front_matter(
+    markdown_string: str,
+) -> tuple[dict[str, any], str]:
+    """
+    Parses a Markdown string to extract front matter (YAML) and the remaining content.
+
+    Front matter is expected to be at the very beginning of the string,
+    enclosed by '---' on lines by themselves.
+
+    Args:
+        markdown_string (str): The input Markdown string, potentially with front matter.
+
+    Returns:
+        Tuple[Dict[str, Any], str]: A tuple containing:
+            - A dictionary of the parsed front matter.
+            - The Markdown string with the front matter removed.
+            If no front matter is found, an empty dictionary and the original string are returned.
+    """
+    front_matter: dict[str, any] = {}
+    content_start_index: int = 0
+    lines = markdown_string.splitlines()
+
+    # Check for the opening '---'
+    if len(lines) > 0 and lines[0].strip() == "---":
+        # Find the closing '---'
+        for i in range(1, len(lines)):
+            if lines[i].strip() == "---":
+                # Found the closing '---', extract the YAML content
+                yaml_content = "\n".join(lines[1:i])
+                try:
+                    front_matter = yaml.safe_load(yaml_content)
+                    if front_matter is None:  # Handle empty front matter block
+                        front_matter = {}
+                    content_start_index = (
+                        i + 1
+                    )  # Content starts after the closing '---'
+                except yaml.YAMLError as e:
+                    print(f"Warning: Could not parse front matter as YAML. Error: {e}")
+                    # If parsing fails, treat the whole thing as regular markdown
+                    front_matter = {}
+                    content_start_index = 0
+                break
+        else:
+            # No closing '---' found, treat the whole thing as regular markdown
+            front_matter = {}
+            content_start_index = 0
+    else:
+        # No opening '---', so no front matter
+        front_matter = {}
+        content_start_index = 0
+
+    # Reconstruct the markdown content without the front matter
+    truncated_markdown = "\n".join(lines[content_start_index:])
+
+    return front_matter, truncated_markdown
 
 
 if __name__ == "__main__":
@@ -76,7 +164,8 @@ if __name__ == "__main__":
     # For demonstration, we'll create some dummy folders and files.
 
     # Create a dummy source folder structure
-    dummy_source = "/workspaces/media-wiki/pages"
+    dummy_source = "/workspaces/media-wiki/pages/supervising/policy"
+    # dummy_source = "/workspaces/media-wiki/pages"
     dummy_destination = "/workspaces/media-wiki/pages-parsed"
 
     if os.path.exists(dummy_destination) and os.path.isdir(dummy_destination):
@@ -90,14 +179,14 @@ if __name__ == "__main__":
     print("\n--- Verification ---")
     if os.path.exists(dummy_destination):
         print(f"Destination folder '{dummy_destination}' exists.")
-        print("Contents:")
-        for root, dirs, files in os.walk(dummy_destination):
-            level = root.replace(dummy_destination, "").count(os.sep)
-            indent = " " * 4 * (level)
-            print(f"{indent}{os.path.basename(root)}/")
-            subindent = " " * 4 * (level + 1)
-            for f in files:
-                print(f"{subindent}{f}")
+        # print("Contents:")
+        # for root, dirs, files in os.walk(dummy_destination):
+        #     level = root.replace(dummy_destination, "").count(os.sep)
+        #     indent = " " * 4 * (level)
+        #     print(f"{indent}{os.path.basename(root)}/")
+        #     subindent = " " * 4 * (level + 1)
+        #     for f in files:
+        #         print(f"{subindent}{f}")
     else:
         print(
             f"Destination folder '{dummy_destination}' does not exist after copy attempt."
