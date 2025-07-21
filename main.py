@@ -112,13 +112,6 @@ def add_front_matter(
     )
 
     parsed_tags = get_extra_tags(converted_link_markdown)
-    extra_tags = set()
-
-    for t in parsed_tags:
-        # Need to break it up, as slashes are individually requested
-        # https://github.com/requarks/wiki/blob/d96bbaf42c792f26559540e609b859fa038766ce/client/components/tags.vue#L245
-        for ex in t[1:].split("/"):
-            extra_tags.add(ex)
 
     matter["title"] = title
     matter["description"] = title
@@ -127,9 +120,10 @@ def add_front_matter(
     # https://github.com/requarks/wiki/blob/d96bbaf42c792f26559540e609b859fa038766ce/server/modules/storage/disk/common.js#L83
     # https://www.geeksforgeeks.org/javascript/lodash-_-isnil-method/
     tags = matter.get("tags", [])
-    tags.extend(extra_tags)
-    if len(tags) > 0:
-        matter["tags"] = ", ".join(tags)
+    tags.extend(parsed_tags)
+    filtered_tags = filter_tags(tags)
+    if len(filtered_tags) > 0:
+        matter["tags"] = ", ".join(filtered_tags)
     matter["editor"] = "markdown"
     matter["dateCreated"] = date_now
 
@@ -262,6 +256,20 @@ def get_extra_tags(markdown: str) -> list[str]:
     regex = r"[^#\w](#[^\s#\)]+)"
     return re.findall(regex, markdown)
 
+def filter_tags(tags: list[str]) -> list[str]:
+    res = set[str]()
+    for t in tags:
+        # Need to break it up, as slashes are individually requested
+        # https://github.com/requarks/wiki/blob/d96bbaf42c792f26559540e609b859fa038766ce/client/components/tags.vue#L245
+        splits = t[1:].split("/")
+        if splits[0] == "course" and len(splits) > 2:
+            continue
+        else:
+            for s in splits:
+                res.add(s)
+
+    return [*res]
+
 
 if __name__ == "__main__":
     # --- Example Usage ---
@@ -270,8 +278,8 @@ if __name__ == "__main__":
 
     # Create a dummy source folder structure
     # dummy_source = "/workspaces/media-wiki/pages/supervising/policy"
-    dummy_source = "/workspaces/media-wiki/pages"
-    dummy_destination = "/workspaces/media-wiki/pages-parsed"
+    dummy_source = "./pages"
+    dummy_destination = "./pages-parsed"
 
     if os.path.exists(dummy_destination) and os.path.isdir(dummy_destination):
         import shutil  # Temporarily import shutil for cleanup
