@@ -253,7 +253,7 @@ def convert_wikilinks_to_markdown_links(
 
 
 def get_extra_tags(markdown: str) -> list[str]:
-    regex = r"[^#\w](#[^\s#\)]+)"
+    regex = r"[^#\w](#[^\s#\:|)]+)"
     return re.findall(regex, markdown)
 
 def filter_tags(tags: list[str]) -> list[str]:
@@ -261,7 +261,7 @@ def filter_tags(tags: list[str]) -> list[str]:
     for t in tags:
         # Need to break it up, as slashes are individually requested
         # https://github.com/requarks/wiki/blob/d96bbaf42c792f26559540e609b859fa038766ce/client/components/tags.vue#L245
-        splits = t[1:].split("/")
+        splits = (t[1:] if t.startswith("#") else t).split("/")
         if splits[0] == "course" and len(splits) > 2:
             continue
         else:
