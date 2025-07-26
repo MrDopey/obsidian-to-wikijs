@@ -113,6 +113,7 @@ def copy_folder_recursively(
 def create_index_markdown(title: str, markddown_files: list[str]) -> tuple[str, str]:
     markddown_files.sort(key=lambda x: x.lower())
     converted_link_markdown = "\n".join(f"  - [{"" if f.endswith(".md") else "/"}{get_file_name(f)}](./{fix_file_name(title)}/{fix_file_name(get_file_name(f))})" for f in markddown_files)
+    converted_link_markdown = converted_link_markdown.rstrip()
     hash = get_hash(converted_link_markdown)
     matter = {}
     matter["title"] = title
@@ -170,6 +171,7 @@ def add_front_matter(
     converted_link_markdown = convert_wikilinks_to_markdown_links(
         markdown, path, note_map
     )
+    converted_link_markdown = converted_link_markdown.strip()
 
     parsed_tags = get_extra_tags(converted_link_markdown)
 
