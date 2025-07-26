@@ -93,13 +93,36 @@ def copy_folder_recursively(
         print(
             f"Successfully copied contents of '{source_folder}' to '{destination_folder}'."
         )
+
+        markddown_files = [ f for f in os.listdir(source_folder)] 
+        if suffix != "" and len(markddown_files) > 0:
+            markdown_index = create_index_markdown(os.path.basename(source_folder), markddown_files)
+            index_file_name = os.path.join(destination_folder, "..", f"{os.path.basename(destination_folder)}.md")
+            with open(index_file_name, "w") as dest_file:
+                dest_file.write(markdown_index)
+
+            print(f"Wrote index file {index_file_name}")
     except OSError as e:
         print(f"Operating system error during copy: {e}")
 
+def create_index_markdown(title: str, markddown_files: list[str]) -> str:
+    markddown_files.sort(key=lambda x: x.lower())
+    converted_link_markdown = "\n".join(f"  - [{"" if f.endswith(".md") else "/"}{get_file_name(f)}](./{fix_file_name(title)}/{fix_file_name(get_file_name(f))})" for f in markddown_files)
+    matter = {}
+    matter["title"] = title
+    matter["description"] = title
+    matter["published"] = True
+    matter["date"] = date_now
+    matter["editor"] = "markdown"
+    matter["dateCreated"] = date_now
+
+    return f"---\n{yaml.dump(matter)}---\n\n{converted_link_markdown}"
 
 def fix_file_name(path: str) -> str:
     return path.lower().replace(" ", "-")
 
+def get_file_name(path: str) -> str:
+    return path[:-3] if path.endswith(".md") else path
 
 def add_front_matter(
     original_text: str, original_path: str, path: Path, note_map: dict[str, Path]
