@@ -165,7 +165,7 @@ def add_front_matter(
     if len(filtered_tags) > 0:
         matter["tags"] = ", ".join(filtered_tags)
     matter["editor"] = "markdown"
-    matter["dateCreated"] = date_now
+    # matter["dateCreated"] = date_now
 
     return f"---\n{yaml.dump(matter)}---\n\n{converted_link_markdown}"
 
