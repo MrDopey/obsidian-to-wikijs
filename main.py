@@ -119,7 +119,7 @@ def create_index_markdown(title: str, markddown_files: list[str]) -> str:
     return f"---\n{yaml.dump(matter)}---\n\n{converted_link_markdown}"
 
 def fix_file_name(path: str) -> str:
-    return path.lower().replace(" ", "-")
+    return path.lower().replace(" - ", "-").replace(" ", "-")
 
 def get_file_name(path: str) -> str:
     return path[:-3] if path.endswith(".md") else path
