@@ -119,7 +119,24 @@ def create_index_markdown(title: str, markddown_files: list[str]) -> str:
     return f"---\n{yaml.dump(matter)}---\n\n{converted_link_markdown}"
 
 def fix_file_name(path: str) -> str:
-    return path.lower().replace(" - ", "-").replace(" ", "-")
+    """
+    Sanitizes a file path by replacing dots with hyphens in the filename
+    portion, while preserving the extension.
+
+    Args:
+        filepath (str): The original file path.
+
+    Returns:
+        str: The sanitized file path.
+    """
+    directory, filename = os.path.split(path)
+    name, ext = os.path.splitext(filename)
+
+    # return path
+    sanitized_name = name.replace('.', '')
+    sanitized_filename = sanitized_name + ext
+
+    return os.path.join(directory, sanitized_filename).lower().replace(" - ", "-").replace(" ", "-")
 
 def get_file_name(path: str) -> str:
     return path[:-3] if path.endswith(".md") else path
@@ -261,7 +278,7 @@ def wikilink_to_mdlink(match, current_file: Path, note_map: dict[str, Path]):
         link_path = relative_path.as_posix()
 
     # Encode URL (spaces, special chars)
-    encoded_path = urllib.parse.quote(fix_file_name(link_path.rsplit(".", 1)[0]))
+    encoded_path = urllib.parse.quote(fix_file_name(link_path).rsplit(".", 1)[0])
     return f"[{alias}]({encoded_path}{anchor})"
 
 
