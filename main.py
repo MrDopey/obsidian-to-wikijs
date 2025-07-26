@@ -173,6 +173,9 @@ def add_front_matter(
     )
     converted_link_markdown = converted_link_markdown.strip()
 
+    if converted_link_markdown == "":
+        converted_link_markdown = "No additional notes"
+
     parsed_tags = get_extra_tags(converted_link_markdown)
 
     matter["title"] = title
