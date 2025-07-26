@@ -73,7 +73,7 @@ def copy_folder_recursively(
                                     destination_item_path, "w", encoding="utf-8"
                                 ) as dest_file:
                                     dest_file.write(data)
-                                print(f" file {file_type}: '{source_item_path}' to '{destination_item_path}'")
+                                print(f" file {file_type}: '{source_item_path}' to '{destination_item_path}' created")
                             else:
                                 print(f" file {file_type}: '{source_item_path}' skipped")
                     case _:
@@ -258,7 +258,10 @@ def wikilink_to_mdlink(match, current_file: Path, note_map: dict[str, Path]):
     # Remove anchor from target
     if "#" in target:
         target, inline_anchor = target.split("#", 1)
-        anchor = f"#{inline_anchor}"
+        anchor = f"#{fix_file_name(inline_anchor)}"
+
+    else:
+        anchor = fix_file_name(anchor)
 
     # Get note path
     target_entry = note_map.get(target.split("/")[-1])
