@@ -1,1 +1,3 @@
+pybind11==3.0.0
+pylcs==0.1.1
 PyYAML==6.0.2

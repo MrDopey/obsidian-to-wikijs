@@ -3,6 +3,7 @@ import datetime
 import os
 from pathlib import Path
 import hashlib
+import pylcs
 
 import re
 import urllib.parse
@@ -17,7 +18,7 @@ def copy_folder_recursively(
     base_source_folder: str,
     base_destination_folder: str,
     suffix: str,
-    note_map: dict[str, Path],
+    note_map: dict[str, list[Path]],
 ) -> None:
     """
     Recursively copies the contents of the source_folder to the destination_folder,
@@ -162,7 +163,7 @@ def get_hash(content: str) -> str:
     return hashlib.sha256(str.encode(content)).hexdigest()
 
 def add_front_matter(
-    original_text: str, original_path: str, path: Path, note_map: dict[str, Path]
+    original_text: str, original_path: str, path: Path, note_map: dict[str, list[Path]]
 ) -> tuple[str, str]:
     title = original_path.rsplit(".", 1)[0]
 
@@ -264,7 +265,7 @@ def parse_markdown_with_front_matter(
     return front_matter, truncated_markdown
 
 
-def wikilink_to_mdlink(match, current_file: Path, note_map: dict[str, Path]):
+def wikilink_to_mdlink(match, current_file: Path, note_map: dict[str, list[Path]]):
     raw = match.group(0)
     target = match.group(1).strip()
     anchor = fix_anchor(match.group(2)) if match.group(2) else ""
@@ -280,36 +281,26 @@ def wikilink_to_mdlink(match, current_file: Path, note_map: dict[str, Path]):
     if not target_entry:
         return raw  # leave wikilink as-is if target not found
 
-    target_path = target_entry.with_suffix(".md")
-    # use_absolute = True
-    # if target_path.is_relative_to(current_file.parent.resolve()):
-    #     relative_path = target_path.relative_to(current_file.parent.resolve())
-    #     use_absolute = sum(1 for part in relative_path.parts if part == "..") > 1
-    try:
-        relative_path = target_path.relative_to(current_file.parent.resolve())
-    except ValueError:
-        # Not a subpath → use absolute-from-vault
-        # relative_path = target_path.relative_to(VAULT_PATH)
-        use_absolute = True
-    else:
-        use_absolute = sum(1 for part in relative_path.parts if part == "..") > 1
-    # Count how many parent traversals are needed (e.g. ../../)
-
-    if use_absolute:
-        # Use absolute-from-vault path
-        abs_path = target_entry.with_suffix(".md")
-        link_path = f"/{abs_path.as_posix()}"
-    else:
-        # Use relative path
-        link_path = relative_path.as_posix()
-
+    link_path = get_best_candidate(current_file, target_entry)
     # Encode URL (spaces, special chars)
     encoded_path = urllib.parse.quote(fix_file_name(link_path).rsplit(".", 1)[0])
     return f"[{alias}]({encoded_path}{anchor})"
 
 
+def get_best_candidate(current_file: Path, candidates: list[Path]) -> str:
+
+    abs_candidates = []
+    for f in candidates:
+        if f.is_relative_to(current_file.parent.resolve()):
+            return f.relative_to(current_file.parent.resolve()).as_posix()
+        else:
+            abs_candidates.append([f.as_posix(), pylcs.lcs_sequence_length(f.as_posix(), current_file.as_posix())])
+    abs_candidates.sort(key=lambda x: x[1], reverse=True)
+    return f"/{abs_candidates[0][0]}"
+
+
 def convert_wikilinks_to_markdown_links(
-    markdown: str, file_path: Path, note_map: dict[str, Path]
+    markdown: str, file_path: Path, note_map: dict[str, list[Path]]
 ) -> str:
     def repl(match):
         return wikilink_to_mdlink(match, file_path.resolve(), note_map)
@@ -364,7 +355,12 @@ if __name__ == "__main__":
         # shutil.rmtree(dummy_destination)
 
     vault_path = Path(dummy_source)
-    note_map = {f.stem: f.relative_to(vault_path) for f in vault_path.rglob("*.md")}
+    note_map = {}
+
+    for f in vault_path.rglob("*.md"):
+        old_val = note_map.get(f.stem, [])
+        old_val.append(f.relative_to(vault_path))
+        note_map[f.stem] = old_val
 
     # Call the copy function
     copy_folder_recursively(dummy_source, dummy_destination, "", note_map)
@@ -393,4 +389,4 @@ if __name__ == "__main__":
     # if os.path.exists(dummy_destination) and os.path.isdir(dummy_destination):
     #     import shutil
     #     shutil.rmtree(dummy_destination)
-    # print("\nCleaned up dummy folders.")
+    # print("\nCleaned upt dummy folders.")
