@@ -124,6 +124,17 @@ def create_index_markdown(title: str, markddown_files: list[str]) -> tuple[str, 
 
     return hash, f"---\n{yaml.dump(matter)}---\n\n{converted_link_markdown}"
 
+def fix_anchor(path: str) -> str:
+
+    # obsidian linking to arbitrary paragraph
+    if path.startswith("^"):
+        return ""
+
+    fixed = re.sub(r"[^a-zA-Z- 0-9]", "", path).replace(" ", "-").lower()
+
+    # https://github.com/requarks/wiki/blob/d96bbaf42c792f26559540e609b859fa038766ce/server/modules/rendering/html-core/renderer.js#L211
+    return f"#h-{fixed}" if re.search(r"^\d", fixed) else f"#{fixed}"
+
 def fix_file_name(path: str) -> str:
     """
     Sanitizes a file path by replacing dots with hyphens in the filename
@@ -256,16 +267,13 @@ def parse_markdown_with_front_matter(
 def wikilink_to_mdlink(match, current_file: Path, note_map: dict[str, Path]):
     raw = match.group(0)
     target = match.group(1).strip()
-    anchor = match.group(2) or ""
+    anchor = fix_anchor(match.group(2)) if match.group(2) else ""
     alias = match.group(4) or target.split("/")[-1]
 
     # Remove anchor from target
     if "#" in target:
         target, inline_anchor = target.split("#", 1)
-        anchor = f"#{fix_file_name(inline_anchor)}"
-
-    else:
-        anchor = fix_file_name(anchor)
+        anchor = fix_anchor(inline_anchor)
 
     # Get note path
     target_entry = note_map.get(target.split("/")[-1])
@@ -306,7 +314,7 @@ def convert_wikilinks_to_markdown_links(
     def repl(match):
         return wikilink_to_mdlink(match, file_path.resolve(), note_map)
 
-    converted = re.sub(r"\[\[([^\]\|#]+)(#[^\]\|]+)?(\|([^\]]+))?\]\]", repl, markdown)
+    converted = re.sub(r"\[\[([^\]\|#]+)#?([^\]\|]+)?(\|([^\]]+))?\]\]", repl, markdown)
     return converted
 
 
