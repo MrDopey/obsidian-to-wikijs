@@ -176,6 +176,8 @@ def add_front_matter(
     if converted_link_markdown == "":
         converted_link_markdown = "No additional notes"
 
+    links = parse_links(converted_link_markdown)
+
     parsed_tags = get_extra_tags(converted_link_markdown)
 
     matter["title"] = title
@@ -191,6 +193,8 @@ def add_front_matter(
     else:
         matter["tags"] = None
     matter["editor"] = "markdown"
+    if links:
+        matter["links"] = links
     # matter["dateCreated"] = date_now
     hashable_tags = yaml.dump(matter)
 
@@ -342,6 +346,44 @@ def should_write_destination(hash: str, path: str) -> bool:
             return original_hash != hash
     else:
         return True
+
+def parse_links(converted_link_markdown: str) -> list[str]:
+    ten_lines = converted_link_markdown.split("\n")
+
+    links = []
+    multiline = False
+    for l in ten_lines:
+        if l == "":
+            break
+
+        if multiline:
+            if l.startswith("*") or l.startswith("-"):
+                val = l[1:].strip()
+
+                if val.startswith("http"):
+                    links.append(val)
+            else:
+                break
+        else:
+            splits = l.split(":", 1)
+
+            if splits[0].lower() == "link":
+                match len(splits):
+                    case 1:
+                        multiline=True
+                    case 2:
+                        val = splits[1].strip()
+
+                        if val.startswith("http"):
+                            links.append(val)
+                            break
+                        elif val == "":
+                            multiline=True
+                        else:
+                            # print(f"not a link {val}")
+                            break
+
+    return sorted(links)
 
 if __name__ == "__main__":
     # --- Example Usage ---
