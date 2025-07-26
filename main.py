@@ -276,7 +276,7 @@ def convert_wikilinks_to_markdown_links(
 
 
 def get_extra_tags(markdown: str) -> list[str]:
-    regex = r"[^#\w](#[^\s#\:|)]+)"
+    regex = r"[^#\w](#[a-zA-Z/]+)"
     return re.findall(regex, markdown)
 
 def filter_tags(tags: list[str]) -> list[str]:
