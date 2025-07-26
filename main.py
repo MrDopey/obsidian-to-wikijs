@@ -2,6 +2,7 @@
 import datetime
 import os
 from pathlib import Path
+import hashlib
 
 import re
 import urllib.parse
@@ -55,25 +56,26 @@ def copy_folder_recursively(
             if os.path.isfile(source_item_path):
 
                 file_type = item_name.rsplit(".", 1)[1]
-                print(
-                    f"Copying file {file_type}: '{source_item_path}' to '{destination_item_path}'"
-                )
 
                 match file_type:
                     case "md":
                         # If it's a file, copy it
                         with open(source_item_path, "r", encoding="utf-8") as src_file:
-                            with open(
-                                destination_item_path, "w", encoding="utf-8"
-                            ) as dest_file:
-                                data = add_front_matter(
-                                    src_file.read(),
-                                    item_name,
-                                    Path(source_item_path),
-                                    note_map,
-                                )
-                                # print(data)
-                                dest_file.write(data)
+                            hash, data = add_front_matter(
+                                src_file.read(),
+                                item_name,
+                                Path(source_item_path),
+                                note_map,
+                            )
+
+                            if should_write_destination(hash, destination_item_path):
+                                with open(
+                                    destination_item_path, "w", encoding="utf-8"
+                                ) as dest_file:
+                                    dest_file.write(data)
+                                print(f" file {file_type}: '{source_item_path}' to '{destination_item_path}'")
+                            else:
+                                print(f" file {file_type}: '{source_item_path}' skipped")
                     case _:
                         with open(source_item_path, "rb") as src_file:
                             with open(destination_item_path, "wb") as dest_file:
@@ -96,27 +98,31 @@ def copy_folder_recursively(
 
         markddown_files = [ f for f in os.listdir(source_folder)] 
         if suffix != "" and len(markddown_files) > 0:
-            markdown_index = create_index_markdown(os.path.basename(source_folder), markddown_files)
+            hash, markdown_index = create_index_markdown(os.path.basename(source_folder), markddown_files)
             index_file_name = os.path.join(destination_folder, "..", f"{os.path.basename(destination_folder)}.md")
-            with open(index_file_name, "w") as dest_file:
-                dest_file.write(markdown_index)
-
-            print(f"Wrote index file {index_file_name}")
+            if should_write_destination(hash, index_file_name):
+                with open(index_file_name, "w") as dest_file:
+                    dest_file.write(markdown_index)
+                print(f"Index file updated {index_file_name}")
+            else:
+                print(f"Index file skipped {index_file_name}")
     except OSError as e:
         print(f"Operating system error during copy: {e}")
 
-def create_index_markdown(title: str, markddown_files: list[str]) -> str:
+def create_index_markdown(title: str, markddown_files: list[str]) -> tuple[str, str]:
     markddown_files.sort(key=lambda x: x.lower())
     converted_link_markdown = "\n".join(f"  - [{"" if f.endswith(".md") else "/"}{get_file_name(f)}](./{fix_file_name(title)}/{fix_file_name(get_file_name(f))})" for f in markddown_files)
+    hash = get_hash(converted_link_markdown)
     matter = {}
     matter["title"] = title
     matter["description"] = title
     matter["published"] = True
     matter["date"] = date_now
+    matter["hash"] = hash
     matter["editor"] = "markdown"
-    matter["dateCreated"] = date_now
+    # matter["dateCreated"] = date_now
 
-    return f"---\n{yaml.dump(matter)}---\n\n{converted_link_markdown}"
+    return hash, f"---\n{yaml.dump(matter)}---\n\n{converted_link_markdown}"
 
 def fix_file_name(path: str) -> str:
     """
@@ -141,9 +147,12 @@ def fix_file_name(path: str) -> str:
 def get_file_name(path: str) -> str:
     return path[:-3] if path.endswith(".md") else path
 
+def get_hash(content: str) -> str:
+    return hashlib.sha256(str.encode(content)).hexdigest()
+
 def add_front_matter(
     original_text: str, original_path: str, path: Path, note_map: dict[str, Path]
-) -> str:
+) -> tuple[str, str]:
     title = original_path.rsplit(".", 1)[0]
 
     matter, markdown = parse_markdown_with_front_matter(original_text)
@@ -153,10 +162,12 @@ def add_front_matter(
 
     parsed_tags = get_extra_tags(converted_link_markdown)
 
+    hash = get_hash(converted_link_markdown)
     matter["title"] = title
     matter["description"] = title
     matter["published"] = True
     matter["date"] = date_now
+    matter["hash"] = hash
     # https://github.com/requarks/wiki/blob/d96bbaf42c792f26559540e609b859fa038766ce/server/modules/storage/disk/common.js#L83
     # https://www.geeksforgeeks.org/javascript/lodash-_-isnil-method/
     tags = matter.get("tags", [])
@@ -167,7 +178,7 @@ def add_front_matter(
     matter["editor"] = "markdown"
     # matter["dateCreated"] = date_now
 
-    return f"---\n{yaml.dump(matter)}---\n\n{converted_link_markdown}"
+    return hash, f"---\n{yaml.dump(matter)}---\n\n{converted_link_markdown}"
 
 
 # ---
@@ -310,6 +321,16 @@ def filter_tags(tags: list[str]) -> list[str]:
 
     return [*res]
 
+def should_write_destination(hash: str, path: str) -> bool:
+    
+    if os.path.exists(path) and path.endswith(".md"):
+        with open(path, "r", encoding="utf-8") as f:
+            matter, _ = parse_markdown_with_front_matter(f.read())
+            original_hash = matter.get("hash", "")
+            
+            return original_hash != hash
+    else:
+        return True
 
 if __name__ == "__main__":
     # --- Example Usage ---
@@ -321,10 +342,9 @@ if __name__ == "__main__":
     dummy_source = "./pages"
     dummy_destination = "./pages-parsed"
 
-    if os.path.exists(dummy_destination) and os.path.isdir(dummy_destination):
-        import shutil  # Temporarily import shutil for cleanup
-
-        shutil.rmtree(dummy_destination)
+    # if os.path.exists(dummy_destination) and os.path.isdir(dummy_destination):
+        # import shutil  # Temporarily import shutil for cleanup
+        # shutil.rmtree(dummy_destination)
 
     vault_path = Path(dummy_source)
     note_map = {f.stem: f.relative_to(vault_path) for f in vault_path.rglob("*.md")}
