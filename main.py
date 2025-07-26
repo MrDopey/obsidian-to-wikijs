@@ -311,7 +311,7 @@ def convert_wikilinks_to_markdown_links(
 
 
 def get_extra_tags(markdown: str) -> list[str]:
-    regex = r"[^#\w]#([a-zA-Z/]+)"
+    regex = r"[^#\w]#([a-zA-Z/-]+)"
     return re.findall(regex, markdown)
 
 def filter_tags(tags: list[str]) -> list[str]:
@@ -321,7 +321,9 @@ def filter_tags(tags: list[str]) -> list[str]:
         # https://github.com/requarks/wiki/blob/d96bbaf42c792f26559540e609b859fa038766ce/client/components/tags.vue#L245
         splits = t.split("/")
         if splits[0] == "course" and len(splits) > 2:
-            continue
+            # Can't remove tags, so give it a default
+            # https://github.com/requarks/wiki/blob/d96bbaf42c792f26559540e609b859fa038766ce/server/modules/storage/disk/common.js#L83
+            res.add(splits[0])
         else:
             for s in splits:
                 res.add(s)
