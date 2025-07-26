@@ -162,12 +162,9 @@ def add_front_matter(
 
     parsed_tags = get_extra_tags(converted_link_markdown)
 
-    hash = get_hash(converted_link_markdown)
     matter["title"] = title
     matter["description"] = title
     matter["published"] = True
-    matter["date"] = date_now
-    matter["hash"] = hash
     # https://github.com/requarks/wiki/blob/d96bbaf42c792f26559540e609b859fa038766ce/server/modules/storage/disk/common.js#L83
     # https://www.geeksforgeeks.org/javascript/lodash-_-isnil-method/
     tags = matter.get("tags", [])
@@ -175,8 +172,15 @@ def add_front_matter(
     filtered_tags = filter_tags(tags)
     if len(filtered_tags) > 0:
         matter["tags"] = ", ".join(filtered_tags)
+    else:
+        matter["tags"] = None
     matter["editor"] = "markdown"
     # matter["dateCreated"] = date_now
+    hashable_tags = yaml.dump(matter)
+
+    hash = get_hash(hashable_tags + converted_link_markdown)
+    matter["date"] = date_now
+    matter["hash"] = hash
 
     return hash, f"---\n{yaml.dump(matter)}---\n\n{converted_link_markdown}"
 
@@ -322,7 +326,7 @@ def filter_tags(tags: list[str]) -> list[str]:
             for s in splits:
                 res.add(s)
 
-    return [*res]
+    return sorted([*res])
 
 def should_write_destination(hash: str, path: str) -> bool:
     
