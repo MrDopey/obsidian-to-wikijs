@@ -9,9 +9,9 @@ import re
 import urllib.parse
 import yaml
 
-date_now = (
-    datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat()
-)
+# date_now = (
+#     datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat()
+# )
 
 
 def copy_folder_recursively(
@@ -118,7 +118,6 @@ def create_index_markdown(title: str, markddown_files: list[str]) -> tuple[str, 
     matter["title"] = title
     matter["description"] = title
     matter["published"] = True
-    matter["date"] = date_now
     matter["hash"] = hash
     matter["editor"] = "markdown"
     # matter["dateCreated"] = date_now
@@ -191,7 +190,6 @@ def add_front_matter(
     hashable_tags = yaml.dump(matter)
 
     hash = get_hash(hashable_tags + converted_link_markdown)
-    matter["date"] = date_now
     matter["hash"] = hash
 
     return hash, f"---\n{yaml.dump(matter)}---\n\n{converted_link_markdown}"
