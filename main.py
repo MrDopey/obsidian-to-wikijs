@@ -43,7 +43,7 @@ def copy_folder_recursively(
     # Create the destination root folder if it doesn't exist
     # If it exists, we will proceed to copy into it, overwriting files if they have the same name.
     os.makedirs(destination_folder, exist_ok=True)
-    print(f"Ensured destination folder '{destination_folder}' exists.")
+    # print(f"Ensured destination folder '{destination_folder}' exists.")
 
     try:
         # Walk through the source directory
@@ -74,15 +74,15 @@ def copy_folder_recursively(
                                 ) as dest_file:
                                     dest_file.write(data)
                                 print(f" file {file_type}: '{source_item_path}' to '{destination_item_path}' created")
-                            else:
-                                print(f" file {file_type}: '{source_item_path}' skipped")
+                            # else:
+                            #     print(f" file {file_type}: '{source_item_path}' skipped")
                     case _:
                         with open(source_item_path, "rb") as src_file:
                             with open(destination_item_path, "wb") as dest_file:
                                 dest_file.write(src_file.read())
             elif os.path.isdir(source_item_path):
-                # If it's a directory, recursively call the function
-                print(f"Entering directory: '{source_item_path}'")
+                # # If it's a directory, recursively call the function
+                # print(f"Entering directory: '{source_item_path}'")
                 copy_folder_recursively(
                     base_source_folder,
                     base_destination_folder,
@@ -92,9 +92,9 @@ def copy_folder_recursively(
             else:
                 print(f"Skipping unsupported item type: '{source_item_path}'")
 
-        print(
-            f"Successfully copied contents of '{source_folder}' to '{destination_folder}'."
-        )
+        # print(
+        #     f"Successfully copied contents of '{source_folder}' to '{destination_folder}'."
+        # )
 
         markddown_files = [ f for f in os.listdir(source_folder)] 
         if suffix != "" and len(markddown_files) > 0:
@@ -104,8 +104,8 @@ def copy_folder_recursively(
                 with open(index_file_name, "w") as dest_file:
                     dest_file.write(markdown_index)
                 print(f"Index file updated {index_file_name}")
-            else:
-                print(f"Index file skipped {index_file_name}")
+            # else:
+                # print(f"Index file skipped {index_file_name}")
     except OSError as e:
         print(f"Operating system error during copy: {e}")
 
